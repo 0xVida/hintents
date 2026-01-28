@@ -13,12 +13,12 @@ func main() {
 		fmt.Println("Usage: go run generate_sample_trace.go <output_file>")
 		os.Exit(1)
 	}
-	
+
 	filename := os.Args[1]
-	
+
 	// Create a sample execution trace
 	executionTrace := trace.NewExecutionTrace("sample-tx-hash-12345", 3)
-	
+
 	// Simulate a complex contract execution
 	states := []trace.ExecutionState{
 		{
@@ -38,7 +38,7 @@ func main() {
 			Arguments:   []interface{}{"GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37", 500000},
 			ReturnValue: true,
 			HostState: map[string]interface{}{
-				"balance": 500000,
+				"balance":      500000,
 				"total_supply": 500000,
 			},
 			Memory: map[string]interface{}{
@@ -52,7 +52,7 @@ func main() {
 			Function:   "transfer",
 			Arguments:  []interface{}{"GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37", "GC3C4AKRBQLHOJ45U4XG35ESVWRDECWO5XLDGYADO6DPR3L7KIDVUMML", 100000},
 			HostState: map[string]interface{}{
-				"balance": 400000,
+				"balance":      400000,
 				"total_supply": 500000,
 			},
 			Memory: map[string]interface{}{
@@ -79,13 +79,13 @@ func main() {
 			Arguments:  []interface{}{"GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37", "GC3C4AKRBQLHOJ45U4XG35ESVWRDECWO5XLDGYADO6DPR3L7KIDVUMML", 500000},
 			Error:      "insufficient balance: attempted 500000, available 400000",
 			HostState: map[string]interface{}{
-				"balance": 400000,
+				"balance":    400000,
 				"error_code": "INSUFFICIENT_BALANCE",
 			},
 			Memory: map[string]interface{}{
-				"attempted_amount": 500000,
+				"attempted_amount":  500000,
 				"available_balance": 400000,
-				"error_triggered": true,
+				"error_triggered":   true,
 			},
 		},
 		{
@@ -95,7 +95,7 @@ func main() {
 			Arguments:   []interface{}{"INSUFFICIENT_BALANCE"},
 			ReturnValue: "error_logged",
 			HostState: map[string]interface{}{
-				"last_error": "INSUFFICIENT_BALANCE",
+				"last_error":  "INSUFFICIENT_BALANCE",
 				"error_count": 1,
 			},
 		},
@@ -105,30 +105,30 @@ func main() {
 			ReturnValue: "failed",
 			HostState: map[string]interface{}{
 				"final_balance": 400000,
-				"status": "failed",
-				"gas_used": 15000,
+				"status":        "failed",
+				"gas_used":      15000,
 			},
 		},
 	}
-	
+
 	// Add all states to the trace
 	for _, state := range states {
 		executionTrace.AddState(state)
 	}
-	
+
 	// Serialize and save
 	traceData, err := executionTrace.ToJSON()
 	if err != nil {
 		fmt.Printf("Failed to serialize trace: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	err = os.WriteFile(filename, traceData, 0644)
 	if err != nil {
 		fmt.Printf("Failed to write trace file: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	fmt.Printf("Sample trace generated: %s\n", filename)
 	fmt.Printf("Total steps: %d\n", len(states))
 	fmt.Printf("Snapshots: %d\n", len(executionTrace.Snapshots))

@@ -24,17 +24,17 @@ type Runner struct {
 func (r *Runner) RunWithTrace(ctx context.Context, req *SimulationRequest, txHash string) (*SimulationResponse, *trace.ExecutionTrace, error) {
 	// Create execution trace
 	executionTrace := trace.NewExecutionTrace(txHash, 5) // Snapshot every 5 steps
-	
+
 	// Add initial state
 	executionTrace.AddState(trace.ExecutionState{
 		Operation:  "simulation_start",
 		ContractID: "simulator",
 		HostState: map[string]interface{}{
-			"envelope_size": len(req.EnvelopeXdr),
+			"envelope_size":      len(req.EnvelopeXdr),
 			"has_ledger_entries": req.LedgerEntries != nil,
 		},
 	})
-	
+
 	// Run the simulation
 	resp, err := r.Run(ctx, req)
 	if err != nil {
@@ -45,22 +45,22 @@ func (r *Runner) RunWithTrace(ctx context.Context, req *SimulationRequest, txHas
 		})
 		return resp, executionTrace, err
 	}
-	
+
 	// Parse events and logs to create trace states
 	r.parseSimulationOutput(resp, executionTrace)
-	
+
 	// Add final state
 	executionTrace.AddState(trace.ExecutionState{
 		Operation: "simulation_complete",
 		HostState: map[string]interface{}{
-			"status": resp.Status,
+			"status":       resp.Status,
 			"events_count": len(resp.Events),
-			"logs_count": len(resp.Logs),
+			"logs_count":   len(resp.Logs),
 		},
 	})
-	
+
 	executionTrace.EndTime = executionTrace.States[len(executionTrace.States)-1].Timestamp
-	
+
 	return resp, executionTrace, nil
 }
 
@@ -177,20 +177,20 @@ func (r *Runner) parseSimulationOutput(resp *SimulationResponse, executionTrace 
 			Operation: "diagnostic_event",
 			HostState: map[string]interface{}{
 				"event_index": i,
-				"event_data": event,
+				"event_data":  event,
 			},
 		}
-		
+
 		// Try to extract contract and function info from event
 		// This is a simplified parser - in reality, you'd parse XDR events
 		if len(event) > 0 {
 			state.ContractID = "contract_from_event" // Would extract from XDR
 			state.Function = "function_from_event"   // Would extract from XDR
 		}
-		
+
 		executionTrace.AddState(state)
 	}
-	
+
 	// Parse logs to create additional states
 	for i, logEntry := range resp.Logs {
 		state := trace.ExecutionState{

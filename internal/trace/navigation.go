@@ -31,12 +31,12 @@ type StateSnapshot struct {
 
 // ExecutionTrace manages the complete execution trace with bi-directional navigation
 type ExecutionTrace struct {
-	TransactionHash string            `json:"transaction_hash"`
-	StartTime       time.Time         `json:"start_time"`
-	EndTime         time.Time         `json:"end_time"`
-	States          []ExecutionState  `json:"states"`
-	Snapshots       []StateSnapshot   `json:"snapshots"`
-	CurrentStep     int               `json:"current_step"`
+	TransactionHash  string           `json:"transaction_hash"`
+	StartTime        time.Time        `json:"start_time"`
+	EndTime          time.Time        `json:"end_time"`
+	States           []ExecutionState `json:"states"`
+	Snapshots        []StateSnapshot  `json:"snapshots"`
+	CurrentStep      int              `json:"current_step"`
 	SnapshotInterval int              `json:"snapshot_interval"`
 }
 
@@ -45,7 +45,7 @@ func NewExecutionTrace(txHash string, snapshotInterval int) *ExecutionTrace {
 	if snapshotInterval <= 0 {
 		snapshotInterval = 10 // Default: snapshot every 10 steps
 	}
-	
+
 	return &ExecutionTrace{
 		TransactionHash:  txHash,
 		StartTime:        time.Now(),
@@ -61,7 +61,7 @@ func (t *ExecutionTrace) AddState(state ExecutionState) {
 	state.Step = len(t.States)
 	state.Timestamp = time.Now()
 	t.States = append(t.States, state)
-	
+
 	// Create snapshot at intervals
 	if state.Step%t.SnapshotInterval == 0 {
 		// Reconstruct the complete state up to this point for the snapshot
@@ -84,17 +84,17 @@ func (t *ExecutionTrace) reconstructStateUpTo(step int) (*ExecutionState, error)
 	if step < 0 || step >= len(t.States) {
 		return nil, fmt.Errorf("step %d out of range", step)
 	}
-	
+
 	reconstructedState := &ExecutionState{
 		Step:      step,
 		HostState: make(map[string]interface{}),
 		Memory:    make(map[string]interface{}),
 	}
-	
+
 	// Apply all state changes from 0 to step (inclusive)
 	for i := 0; i <= step; i++ {
 		state := &t.States[i]
-		
+
 		// Update metadata from target step
 		if i == step {
 			reconstructedState.Timestamp = state.Timestamp
@@ -105,7 +105,7 @@ func (t *ExecutionTrace) reconstructStateUpTo(step int) (*ExecutionState, error)
 			reconstructedState.ReturnValue = state.ReturnValue
 			reconstructedState.Error = state.Error
 		}
-		
+
 		// Accumulate state changes
 		if state.HostState != nil {
 			for k, v := range state.HostState {
@@ -118,7 +118,7 @@ func (t *ExecutionTrace) reconstructStateUpTo(step int) (*ExecutionState, error)
 			}
 		}
 	}
-	
+
 	return reconstructedState, nil
 }
 
@@ -127,7 +127,7 @@ func (t *ExecutionTrace) StepForward() (*ExecutionState, error) {
 	if t.CurrentStep >= len(t.States)-1 {
 		return nil, fmt.Errorf("already at the last step")
 	}
-	
+
 	t.CurrentStep++
 	return &t.States[t.CurrentStep], nil
 }
@@ -137,7 +137,7 @@ func (t *ExecutionTrace) StepBackward() (*ExecutionState, error) {
 	if t.CurrentStep <= 0 {
 		return nil, fmt.Errorf("already at the first step")
 	}
-	
+
 	t.CurrentStep--
 	return &t.States[t.CurrentStep], nil
 }
@@ -147,7 +147,7 @@ func (t *ExecutionTrace) JumpToStep(step int) (*ExecutionState, error) {
 	if step < 0 || step >= len(t.States) {
 		return nil, fmt.Errorf("step %d out of range [0, %d]", step, len(t.States)-1)
 	}
-	
+
 	t.CurrentStep = step
 	return &t.States[t.CurrentStep], nil
 }
@@ -157,7 +157,7 @@ func (t *ExecutionTrace) GetCurrentState() (*ExecutionState, error) {
 	if t.CurrentStep < 0 || t.CurrentStep >= len(t.States) {
 		return nil, fmt.Errorf("invalid current step: %d", t.CurrentStep)
 	}
-	
+
 	return &t.States[t.CurrentStep], nil
 }
 
@@ -166,7 +166,7 @@ func (t *ExecutionTrace) ReconstructStateAt(step int) (*ExecutionState, error) {
 	if step < 0 || step >= len(t.States) {
 		return nil, fmt.Errorf("step %d out of range", step)
 	}
-	
+
 	// Find the nearest snapshot before or at the target step
 	var baseSnapshot *StateSnapshot
 	for i := len(t.Snapshots) - 1; i >= 0; i-- {
@@ -175,14 +175,14 @@ func (t *ExecutionTrace) ReconstructStateAt(step int) (*ExecutionState, error) {
 			break
 		}
 	}
-	
+
 	// Start with empty state
 	reconstructedState := &ExecutionState{
 		Step:      step,
 		HostState: make(map[string]interface{}),
 		Memory:    make(map[string]interface{}),
 	}
-	
+
 	// Start from snapshot or beginning
 	startStep := 0
 	if baseSnapshot != nil {
@@ -190,11 +190,11 @@ func (t *ExecutionTrace) ReconstructStateAt(step int) (*ExecutionState, error) {
 		reconstructedState.HostState = copyMap(baseSnapshot.HostState)
 		reconstructedState.Memory = copyMap(baseSnapshot.Memory)
 	}
-	
+
 	// Apply state changes from start to target step (inclusive)
 	for i := startStep; i <= step; i++ {
 		state := &t.States[i]
-		
+
 		// Update metadata from target step
 		if i == step {
 			reconstructedState.Timestamp = state.Timestamp
@@ -205,7 +205,7 @@ func (t *ExecutionTrace) ReconstructStateAt(step int) (*ExecutionState, error) {
 			reconstructedState.ReturnValue = state.ReturnValue
 			reconstructedState.Error = state.Error
 		}
-		
+
 		// Accumulate state changes from all steps up to target
 		if state.HostState != nil {
 			for k, v := range state.HostState {
@@ -218,18 +218,18 @@ func (t *ExecutionTrace) ReconstructStateAt(step int) (*ExecutionState, error) {
 			}
 		}
 	}
-	
+
 	return reconstructedState, nil
 }
 
 // GetNavigationInfo returns information about navigation possibilities
 func (t *ExecutionTrace) GetNavigationInfo() map[string]interface{} {
 	return map[string]interface{}{
-		"total_steps":    len(t.States),
-		"current_step":   t.CurrentStep,
-		"can_step_back":  t.CurrentStep > 0,
+		"total_steps":      len(t.States),
+		"current_step":     t.CurrentStep,
+		"can_step_back":    t.CurrentStep > 0,
 		"can_step_forward": t.CurrentStep < len(t.States)-1,
-		"snapshots_count": len(t.Snapshots),
+		"snapshots_count":  len(t.Snapshots),
 	}
 }
 
@@ -251,7 +251,7 @@ func copyMap(original map[string]interface{}) map[string]interface{} {
 	if original == nil {
 		return make(map[string]interface{})
 	}
-	
+
 	copy := make(map[string]interface{})
 	for k, v := range original {
 		copy[k] = v

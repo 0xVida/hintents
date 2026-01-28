@@ -95,7 +95,7 @@ Example:
 		)
 
 		fmt.Printf("Transaction fetched successfully. Envelope size: %d bytes\n", len(resp.EnvelopeXdr))
-		
+
 		// Generate trace if requested
 		if generateTrace {
 			fmt.Println("Generating execution trace...")
@@ -110,7 +110,7 @@ Example:
 				fmt.Printf("Execution trace saved to: %s\n", filename)
 			}
 		}
-		
+
 		return nil
 	},
 }
@@ -133,34 +133,34 @@ func generateExecutionTrace(ctx context.Context, txHash string, resp *rpc.Transa
 		EnvelopeXdr:   resp.EnvelopeXdr,
 		ResultMetaXdr: resp.ResultMetaXdr,
 	}
-	
+
 	// Create simulator runner
 	runner, err := simulator.NewRunner()
 	if err != nil {
 		return fmt.Errorf("failed to create simulator: %w", err)
 	}
-	
+
 	// Run simulation with trace generation
 	_, executionTrace, err := runner.RunWithTrace(ctx, simReq, txHash)
 	if err != nil {
 		return fmt.Errorf("simulation failed: %w", err)
 	}
-	
+
 	// Save trace to file
 	filename := traceOutputFile
 	if filename == "" {
 		filename = fmt.Sprintf("trace_%s.json", txHash[:8])
 	}
-	
+
 	traceData, err := executionTrace.ToJSON()
 	if err != nil {
 		return fmt.Errorf("failed to serialize trace: %w", err)
 	}
-	
+
 	err = os.WriteFile(filename, traceData, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write trace file: %w", err)
 	}
-	
+
 	return nil
 }
