@@ -220,3 +220,16 @@ fn send_error(msg: String) {
     };
     println!("{}", serde_json::to_string(&res).unwrap());
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_time_travel_deserialization() {
+        let json = r#"{"envelope_xdr": "AAAA", "result_meta_xdr": "BBBB", "timestamp": 1738077842, "ledger_sequence": 1234}"#;
+        let req: SimulationRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.timestamp, Some(1738077842));
+        assert_eq!(req.ledger_sequence, Some(1234));
+    }
+}
