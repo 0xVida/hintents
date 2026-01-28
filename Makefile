@@ -1,3 +1,4 @@
+.PHONY: build test lint lint-unused test-unused validate-ci clean
 .PHONY: build test lint validate-errors clean
 
 # Build the main binary
@@ -12,6 +13,17 @@ test:
 lint:
 	golangci-lint run
 
+# Run unused code detection
+lint-unused:
+	./scripts/lint-unused.sh
+
+# Test unused code detection setup
+test-unused:
+	./scripts/test-unused-detection.sh
+
+# Validate CI/CD configuration
+validate-ci:
+	./scripts/validate-ci.sh
 # Validate error standardization
 validate-errors:
 	./scripts/validate-errors.sh
