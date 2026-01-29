@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/dotandev/hintents/internal/logger"
+	"github.com/schollz/progressbar/v3"
 	"github.com/dotandev/hintents/internal/telemetry"
 	"github.com/stellar/go/clients/horizonclient"
 	"go.opentelemetry.io/otel/attribute"
