@@ -51,7 +51,7 @@ export function registerDebugCommand(program: Command): void {
 
                 // Make RPC request
                 logger.verbose(LogCategory.RPC, 'Initiating transaction fetch...');
-                const txData = await rpcClient.request('/transactions/' + transaction);
+                const txData = await rpcClient.request('/transactions/' + transaction, { method: 'GET' });
 
                 // Verbose: Data parsing
                 logger.verbose(LogCategory.DATA, 'Parsing transaction response...');
@@ -63,6 +63,15 @@ export function registerDebugCommand(program: Command): void {
 
                 // Success
                 logger.success('Debug complete');
+
+                // Performance metrics (verbose)
+                const totalDuration = Date.now() - startTime;
+                const memUsage = process.memoryUsage();
+
+                logger.verbose(LogCategory.PERF, 'Performance metrics');
+                logger.verboseIndent(LogCategory.PERF, `Total execution time: ${totalDuration}ms`);
+                logger.verboseIndent(LogCategory.PERF, `Memory usage: ${logger.formatBytes(memUsage.heapUsed)}`);
+                logger.verboseIndent(LogCategory.PERF, `Peak memory: ${logger.formatBytes(memUsage.heapTotal)}`);
 
             } catch (error) {
                 const totalDuration = Date.now() - startTime;

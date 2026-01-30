@@ -50,19 +50,21 @@ export class FallbackRPCClient {
             }));
         });
 
-        logger.success(`RPC client initialized with ${this.endpoints.length} endpoint(s)`);
+        logger.verbose(LogCategory.RPC, `RPC client initialized with ${this.endpoints.length} endpoint(s)`);
 
-        // BUG: Leaking verbose info into standard mode using logger.info instead of logger.verbose
+        // Fixed: No longer leaking verbose info into standard mode
         this.endpoints.forEach((ep, idx) => {
-            logger.info(`   [${idx + 1}] ${ep.url}`);
+            logger.verboseIndent(LogCategory.RPC, `[${idx + 1}] ${ep.url}`);
         });
     }
 
     /**
      * Make RPC request with automatic fallback
      */
-    async request<T = any>(path: string, data?: any): Promise<T> {
+    async request<T = any>(path: string, options: { method?: 'GET' | 'POST', data?: any } = {}): Promise<T> {
         const logger = getLogger();
+        const method = options.method || 'POST';
+        const data = options.data;
         const startTime = Date.now();
         let lastError: Error | null = null;
 
@@ -78,7 +80,7 @@ export class FallbackRPCClient {
                 endpoint.totalRequests++;
 
                 // Verbose logging for request
-                logger.verbose(LogCategory.RPC, `→ POST ${path}`);
+                logger.verbose(LogCategory.RPC, `→ ${method} ${path}`);
                 logger.verboseIndent(LogCategory.RPC, `Endpoint: ${endpoint.url}`);
 
                 const requestStartTime = Date.now();
@@ -86,9 +88,10 @@ export class FallbackRPCClient {
 
                 // Verbose: Payload size
                 const requestSize = data ? JSON.stringify(data).length : 0;
+                logger.verboseIndent(LogCategory.RPC, `${method} request to ${path}`);
                 logger.verboseIndent(LogCategory.RPC, `Request size: ${logger.formatBytes(requestSize)}`);
 
-                const response = await this.executeWithRetry(client, path, data);
+                const response = await this.executeWithRetry(client, method, path, data);
 
                 const duration = Date.now() - requestStartTime;
                 this.updateMetrics(endpoint, duration, true);
@@ -159,12 +162,15 @@ export class FallbackRPCClient {
     /**
      * Execute request with local retries and exponential backoff
      */
-    private async executeWithRetry(client: AxiosInstance, path: string, data: any): Promise<any> {
+    private async executeWithRetry(client: AxiosInstance, method: 'GET' | 'POST', path: string, data: any): Promise<any> {
         const logger = getLogger();
         let lastError: any;
 
         for (let attempt = 0; attempt < this.config.retries; attempt++) {
             try {
+                if (method === 'GET') {
+                    return await client.get(path);
+                }
                 return await client.post(path, data);
             } catch (error) {
                 lastError = error;

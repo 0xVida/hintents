@@ -73,7 +73,7 @@ export class Logger {
      */
     error(message: string, error?: Error): void {
         if (this.level >= LogLevel.STANDARD) {
-            console.error(chalk.red('❌ ' + message));
+            console.error(chalk.red('❌ ' + message + (error ? `: ${error.message}` : '')));
 
             if (error && this.isVerbose()) {
                 console.error(chalk.red('   Stack trace:'));
