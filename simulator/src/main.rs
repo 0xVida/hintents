@@ -6,6 +6,7 @@ mod config;
 mod gas_optimizer;
 mod ipc;
 mod theme;
+mod runner;
 
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
