@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/dotandev/hintents/internal/logger"
+
+
 	"github.com/dotandev/hintents/internal/telemetry"
 	"github.com/stellar/go/clients/horizonclient"
 	hProtocol "github.com/stellar/go/protocols/horizon"
@@ -105,12 +107,7 @@ type Client struct {
 	Config     NetworkConfig
 }
 
-// TransactionResponse contains the raw XDR fields needed for simulation
-type TransactionResponse struct {
-	EnvelopeXdr   string
-	ResultXdr     string
-	ResultMetaXdr string
-}
+
 
 // NewClient creates a new RPC client with the specified network
 // If network is empty, defaults to Mainnet
@@ -212,6 +209,8 @@ func createHTTPClient(token string) *http.Client {
 			token:     token,
 			transport: http.DefaultTransport,
 		},
+
+
 	}
 }
 
@@ -290,6 +289,7 @@ func (c *Client) getTransactionAttempt(ctx context.Context, hash string) (*Trans
 	logger.Logger.Info("Transaction fetched successfully", "hash", hash, "envelope_size", len(tx.EnvelopeXdr), "url", c.HorizonURL)
 
 	return ParseTransactionResponse(tx), nil
+
 
 }
 
