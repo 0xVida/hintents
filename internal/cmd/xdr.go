@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/dotandev/hintents/internal/decoder"
+	"github.com/dotandev/hintents/internal/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -26,12 +27,12 @@ var xdrCmd = &cobra.Command{
 
 func xdrExec(cmd *cobra.Command, args []string) error {
 	if xdrData == "" {
-		return fmt.Errorf("XDR data required (use --data or pipe via stdin)")
+		return errors.WrapCliArgumentRequired("data")
 	}
 
 	data, err := base64.StdEncoding.DecodeString(xdrData)
 	if err != nil {
-		return fmt.Errorf("invalid base64 input: %w", err)
+		return errors.WrapValidationError(fmt.Sprintf("invalid base64 input: %v", err))
 	}
 
 	var output interface{}
@@ -52,7 +53,7 @@ func xdrExec(cmd *cobra.Command, args []string) error {
 		output = event
 
 	default:
-		return fmt.Errorf("unsupported XDR type: %s (use: ledger-entry, diagnostic-event)", xdrType)
+		return errors.WrapValidationError(fmt.Sprintf("unsupported XDR type: %s (use: ledger-entry, diagnostic-event)", xdrType))
 	}
 
 	formatter := decoder.NewXDRFormatter(decoder.FormatType(xdrFormat))

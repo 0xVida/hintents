@@ -18,6 +18,8 @@ import (
 	"github.com/stellar/go-stellar-sdk/clients/horizonclient"
 	hProtocol "github.com/stellar/go-stellar-sdk/protocols/horizon"
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/dotandev/hintents/internal/errors"
 )
 
 // Network types for Stellar
@@ -221,7 +223,7 @@ func (c *Client) GetTransaction(ctx context.Context, hash string) (*TransactionR
 			}
 		}
 	}
-	return nil, fmt.Errorf("all RPC endpoints failed")
+	return nil, errors.WrapAllRPCFailed()
 }
 
 func (c *Client) getTransactionAttempt(ctx context.Context, hash string) (*TransactionResponse, error) {
@@ -240,7 +242,7 @@ func (c *Client) getTransactionAttempt(ctx context.Context, hash string) (*Trans
 	if err != nil {
 		span.RecordError(err)
 		logger.Logger.Error("Failed to fetch transaction", "hash", hash, "error", err, "url", c.HorizonURL)
-		return nil, fmt.Errorf("failed to fetch transaction from %s: %w", c.HorizonURL, err)
+		return nil, errors.WrapRPCConnectionFailed(err)
 	}
 
 	span.SetAttributes(
@@ -375,13 +377,13 @@ func (c *Client) handleLedgerError(err error, sequence uint32) error {
 			}
 		default:
 			logger.Logger.Error("Horizon error", "sequence", sequence, "status", hErr.Problem.Status, "detail", hErr.Problem.Detail)
-			return fmt.Errorf("horizon error (status %d): %v", hErr.Problem.Status, hErr.Problem.Detail)
+			return errors.WrapRPCError(c.HorizonURL, hErr.Problem.Detail, hErr.Problem.Status)
 		}
 	}
 
 	// Generic error
 	logger.Logger.Error("Failed to fetch ledger", "sequence", sequence, "error", err)
-	return fmt.Errorf("failed to fetch ledger %d: %w", sequence, err)
+	return errors.WrapRPCConnectionFailed(err)
 }
 
 // LedgerNotFoundError indicates that the requested ledger doesn't exist.
@@ -484,7 +486,7 @@ func (c *Client) GetLedgerEntries(ctx context.Context, keys []string) (map[strin
 		}
 		return nil, err
 	}
-	return nil, fmt.Errorf("all Soroban RPC endpoints failed")
+	return nil, errors.WrapAllRPCFailed()
 }
 
 func (c *Client) getLedgerEntriesAttempt(ctx context.Context, keysToFetch []string) (map[string]string, error) {
@@ -498,7 +500,7 @@ func (c *Client) getLedgerEntriesAttempt(ctx context.Context, keysToFetch []stri
 
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return nil, errors.WrapMarshalFailed(err)
 	}
 
 	targetURL := c.HorizonURL
@@ -510,28 +512,28 @@ func (c *Client) getLedgerEntriesAttempt(ctx context.Context, keysToFetch []stri
 
 	req, err := http.NewRequestWithContext(ctx, "POST", targetURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, errors.WrapRPCConnectionFailed(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute request to %s: %w", targetURL, err)
+		return nil, errors.WrapRPCConnectionFailed(err)
 	}
 	defer resp.Body.Close()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
+		return nil, errors.WrapUnmarshalFailed(err, "body read error")
 	}
 
 	var rpcResp GetLedgerEntriesResponse
 	if err := json.Unmarshal(respBytes, &rpcResp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		return nil, errors.WrapUnmarshalFailed(err, string(respBytes))
 	}
 
 	if rpcResp.Error != nil {
-		return nil, fmt.Errorf("rpc error from %s: %s (code %d)", targetURL, rpcResp.Error.Message, rpcResp.Error.Code)
+		return nil, errors.WrapRPCError(targetURL, rpcResp.Error.Message, rpcResp.Error.Code)
 	}
 
 	entries := make(map[string]string)
@@ -577,7 +579,7 @@ func (c *Client) GetAccountTransactions(ctx context.Context, account string, lim
 	page, err := c.Horizon.Transactions(req)
 	if err != nil {
 		logger.Logger.Error("Failed to fetch account transactions", "account", account, "error", err)
-		return nil, fmt.Errorf("failed to fetch account transactions: %w", err)
+		return nil, errors.WrapRPCConnectionFailed(err)
 	}
 
 	summaries := make([]TransactionSummary, 0, len(page.Embedded.Records))
@@ -642,33 +644,33 @@ func (c *Client) SimulateTransaction(ctx context.Context, envelopeXdr string) (*
 
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return nil, errors.WrapMarshalFailed(err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.SorobanURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, errors.WrapRPCConnectionFailed(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute request: %w", err)
+		return nil, errors.WrapRPCConnectionFailed(err)
 	}
 	defer resp.Body.Close()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
+		return nil, errors.WrapUnmarshalFailed(err, "body read error")
 	}
 
 	var rpcResp SimulateTransactionResponse
 	if err := json.Unmarshal(respBytes, &rpcResp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		return nil, errors.WrapUnmarshalFailed(err, string(respBytes))
 	}
 
 	if rpcResp.Error != nil {
-		return nil, fmt.Errorf("rpc error: %s (code %d)", rpcResp.Error.Message, rpcResp.Error.Code)
+		return nil, errors.WrapRPCError(c.SorobanURL, rpcResp.Error.Message, rpcResp.Error.Code)
 	}
 
 	return &rpcResp, nil

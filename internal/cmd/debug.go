@@ -79,7 +79,7 @@ Example:
 			case rpc.Testnet, rpc.Mainnet, rpc.Futurenet:
 				return nil
 			default:
-				return fmt.Errorf("invalid network: %s. Must be one of: testnet, mainnet, futurenet", networkFlag)
+				return errors.WrapInvalidNetwork(networkFlag)
 			}
 		},
 		RunE: d.runDebug,
@@ -188,7 +188,7 @@ Local WASM Replay Mode:
 		}
 
 		if len(args) == 0 {
-			return fmt.Errorf("transaction hash is required when not using --wasm or --demo flag")
+			return errors.WrapValidationError("transaction hash is required when not using --wasm or --demo flag")
 		}
 
 		if err := rpc.ValidateTransactionHash(args[0]); err != nil {
@@ -209,7 +209,7 @@ Local WASM Replay Mode:
 			case rpc.Testnet, rpc.Mainnet, rpc.Futurenet:
 				// valid
 			default:
-				return fmt.Errorf("invalid compare-network: %s. Must be one of: testnet, mainnet, futurenet", compareNetworkFlag)
+				return errors.WrapInvalidNetwork(compareNetworkFlag)
 			}
 		}
 		return nil
