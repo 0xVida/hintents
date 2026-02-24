@@ -29,10 +29,7 @@ MFMwEwYHKoZIzj0CAQYIKoZIzj0DAQcDOgAEWdp8vGtXxyGkftJoJphBnwvlvVfc
   });
 
   test('defaults to software signer when no provider specified', () => {
-    const privateKey = `-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIJ+DYvh6SE+1aDOjF7cZHZ1lAbmxBlz6khKHLDwI/Xtr
------END PRIVATE KEY-----`;
-
+    const privateKey = process.env.TEST_PRIVATE_KEY_PEM || 'test-key-placeholder';
     const signer = createAuditSigner({ softwarePrivateKeyPem: privateKey });
     expect(signer).toBeDefined();
   });
