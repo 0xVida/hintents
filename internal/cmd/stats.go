@@ -16,7 +16,7 @@ import (
 const (
 	statsTopN = 5
 
-	// Ledger resource cost weights for estimating "expensive" calls
+	// Ledger resource cost weights for estimating "expensive" calls.
 	costWeightStorageWrite = 3
 	costWeightAuth         = 2
 	costWeightDefault      = 1
@@ -38,10 +38,13 @@ var statsCmd = &cobra.Command{
 	Use:   "stats",
 	Short: "Summarize budget usage and call depth for the top contract calls",
 	Long: `Returns a non-interactive table of the top 5 most expensive contract calls.
+
 Cost is estimated based on weighted operations:
-  - Storage Writes: weight 3
-  - Auth Checks: weight 2
-  - Other Events: weight 1`,
+  - Storage writes: weight 3
+  - Auth checks:    weight 2
+  - Other events:   weight 1
+
+Call depth counts the number of distinct event types observed per contract.`,
 	Args: cobra.NoArgs,
 	RunE: runStats,
 }
@@ -77,7 +80,7 @@ func loadSimulationResponse(cmd *cobra.Command, id string) (*simulator.Simulatio
 		return data.ToSimulationResponse()
 	}
 
-	data := session.GetCurrentSession()
+	data := GetCurrentSession()
 	if data == nil {
 		return nil, fmt.Errorf("no active session. Run 'erst debug <tx-hash>' first")
 	}
@@ -95,20 +98,16 @@ func buildContractStats(resp *simulator.SimulationResponse) []contractStat {
 		if _, ok := index[id]; !ok {
 			index[id] = &contractStat{contractID: id, seenTypes: make(map[string]bool)}
 		}
-		
+
 		s := index[id]
 		s.eventCount++
-		
+		s.estimatedCost += eventCost(eventType)
+
 		lowerType := strings.ToLower(eventType)
-		switch lowerType {
-		case "storage_write":
+		if lowerType == "storage_write" {
 			s.storageWrites++
-			s.estimatedCost += uint64(costWeightStorageWrite)
-		case "require_auth", "auth":
+		} else if lowerType == "require_auth" || lowerType == "auth" {
 			s.authChecks++
-			s.estimatedCost += uint64(costWeightAuth)
-		default:
-			s.estimatedCost += uint64(costWeightDefault)
 		}
 
 		if !s.seenTypes[lowerType] {
@@ -145,16 +144,22 @@ func buildContractStats(resp *simulator.SimulationResponse) []contractStat {
 	return result
 }
 
-func printStatsTable(stats []contractStat) {
-	const (
-		colContract = 44
-		colCost     = 12
-		colDepth    = 7
-	)
+func eventCost(eventType string) uint64 {
+	switch strings.ToLower(eventType) {
+	case "storage_write":
+		return uint64(costWeightStorageWrite)
+	case "require_auth", "auth":
+		return uint64(costWeightAuth)
+	default:
+		return uint64(costWeightDefault)
+	}
+}
 
+func printStatsTable(stats []contractStat) {
+	const colContract = 44
 	fmt.Printf("Top %d most expensive contract calls\n\n", statsTopN)
 	fmt.Printf("%-44s | %-12s | %-7s\n", "Contract ID", "Est. Cost", "Depth")
-	fmt.Println(strings.Repeat("-", colContract+colCost+colDepth+6))
+	fmt.Println(strings.Repeat("-", colContract+23))
 
 	for i, s := range stats {
 		displayID := s.contractID
@@ -167,4 +172,5 @@ func printStatsTable(stats []contractStat) {
 
 func init() {
 	statsCmd.Flags().StringVar(&statsSessionFlag, "session", "", "Load a saved session by ID")
+	rootCmd.AddCommand(statsCmd)
 }
